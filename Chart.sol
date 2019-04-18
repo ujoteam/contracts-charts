@@ -43,15 +43,15 @@
  *   that you can only do it once?  Or, rather, is it a purely neutral operation?
  */
 
-import "./MintableToken";
+import "./UpvoteToken";
 
 contract Chart
 {
-    MintableToken token;
+    UpvoteToken token;
     PayoutCurve payoutCurve;
 
     constructor(address _token, PayoutCurve _payoutCurve) {
-        token = MintableToken(_token);
+        token = UpvoteToken(_token);
         payoutCurve = _payoutCurve;
     }
 
@@ -91,7 +91,7 @@ contract Chart
         song.allTimeUpvotes++;
         song.upvotes[msg.sender].index = song.currentUpvotes;
 
-        token.mint(1, address(this));
+        token.mint(1 * (10**token.decimals()), address(this));
     }
 
     function withdraw(bytes32 cid) public {
