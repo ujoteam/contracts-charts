@@ -115,10 +115,11 @@ contract Chart
     function getWithdrawableAmount(address user, bytes32 cid) public view returns (uint) {
         Song storage song = songs[cid];
         uint i = song.upvotes[user].index;
+        uint t = song.allTimeUpvotes;
 
         if (payoutCurve == PayoutCurve.Linear) {
             // "PayoutCurve.Linear" distributes withdrawable tokens to users according to the area
-            // under the curve `f(x) = 1 - x/2t` (where t is the total token supply).  This curve
+            // under the curve `f(x) = at - btx` (where t is the total token supply).  This curve
             // has the property that, for any value of t, the total area under this curve is also t.
             // So to determine the number of tokens owed to user `i` (out of `n` total users), we
             // break the curve up into `n` chunks and allow the user to withdrawn chunk `i`.
@@ -135,7 +136,7 @@ contract Chart
             // Substituting in a = i and b = i+1, we end up with the following formula:
             //     tokens  =  ((i+1) - (i+1)^2/4t)  -  (i - i^2/4t)
 
-            return ((i+1) - ((i+1)**2)/(4 * song.allTimeUpvotes))  -  (i - (i**2)/(4 * song.allTimeUpvotes));
+            return (a * (t **2));
 
         } else {
             assert(false, "unknown payout curve");
