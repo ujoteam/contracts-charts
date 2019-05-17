@@ -5,14 +5,14 @@ contract Chart
     PayoutCurve public payoutCurve;
     uint public proposalCost;
 
-    constructor(PayoutCurve _payoutCurve, uint _proposalCost) {
+    constructor(PayoutCurve _payoutCurve, uint _proposalCost) public {
         payoutCurve = _payoutCurve;
         proposalCost = _proposalCost;
     }
 
     enum PayoutCurve {
         Linear,
-        Reciprocal,
+        Reciprocal
     }
 
     struct Song {
@@ -79,15 +79,15 @@ contract Chart
     function withdraw(bytes32 cid) public {
         Song storage song = songs[cid];
 
-        require(song.upvotes[user].index > 0, "you don't have any tokens stored in this song");
+        require(song.upvotes[msg.sender].index > 0, "you don't have any tokens stored in this song");
 
         uint totalWithdrawable = getWithdrawableAmount(msg.sender, cid);
         uint alreadyWithdrawn = song.upvotes[msg.sender].withdrawnAmount;
         uint amountToWithdraw = totalWithdrawable - alreadyWithdrawn;
 
-        assert(song.currentUpvotes >= amountToWithdraw, "calculated withdrawal amount is greater than remaining token supply for this song");
+        require(song.currentUpvotes >= amountToWithdraw, "calculated withdrawal amount is greater than remaining token supply for this song");
 
-        song.upvotes[user].withdrawnAmount = totalWithdrawable;
+        song.upvotes[msg.sender].withdrawnAmount = totalWithdrawable;
 
         song.currentUpvotes -= amountToWithdraw;
         balanceOf[msg.sender] += amountToWithdraw;
@@ -103,7 +103,7 @@ contract Chart
         uint t = song.allTimeUpvotes;
 
         if (payoutCurve == PayoutCurve.Linear) {
-            return ((-2 * i - 1) / t) + 2;
+            return (((uint(-2) * i) - 1) / t) + 2;
         } else if (payoutCurve == PayoutCurve.Reciprocal) {
             revert("not done yet");
         } else {
@@ -111,11 +111,11 @@ contract Chart
         }
     }
 
-    function getCurrentUpvotes(bytes32 cid) public returns (uint) {
+    function getCurrentUpvotes(bytes32 cid) public view returns (uint) {
         return songs[cid].currentUpvotes;
     }
 
-    function getAllTimeUpvotes(bytes32 cid) public returns (uint) {
+    function getAllTimeUpvotes(bytes32 cid) public view returns (uint) {
         return songs[cid].allTimeUpvotes;
     }
 
