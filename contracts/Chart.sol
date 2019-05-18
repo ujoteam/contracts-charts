@@ -2,12 +2,14 @@ pragma solidity 0.5.0;
 
 contract Chart
 {
+    uint constant DECIMALS = 18;
     PayoutCurve public payoutCurve;
     uint public proposalCost;
+    uint public upvoteCost = 1 * (10 ** DECIMALS);
 
     constructor(PayoutCurve _payoutCurve, uint _proposalCost) public {
         payoutCurve = _payoutCurve;
-        proposalCost = _proposalCost;
+        proposalCost = _proposalCost * (10 ** DECIMALS);
     }
 
     enum PayoutCurve {
@@ -31,8 +33,9 @@ contract Chart
         uint withdrawnAmount;
     }
 
-    mapping(bytes32 => Song) songs;
+    mapping(bytes32 => Song) public songs;
     mapping(address => uint) public balanceOf; // token balances
+    mapping(address => bool) knownAddresses;
 
     //
     // Events
@@ -45,7 +48,15 @@ contract Chart
     // Upvote mechanism
     //
 
-    function propose(bytes32 cid) public {
+    modifier maybeTokenGrant {
+        if (knownAddresses[msg.sender] == false) {
+            knownAddresses[msg.sender] = true;
+            balanceOf[msg.sender] = 100 * (10 ** DECIMALS);
+        }
+        _;
+    }
+
+    function propose(bytes32 cid) maybeTokenGrant public {
         require(songs[cid].submittedInBlock == 0, "already proposed");
         require(balanceOf[msg.sender] >= proposalCost, "not enough tokens to propose");
 
@@ -60,18 +71,16 @@ contract Chart
         emit SongProposed(msg.sender, cid);
     }
 
-    function upvote(bytes32 cid) public {
-        require(balanceOf[msg.sender] >= 1, "not enough tokens to upvote");
-        balanceOf[msg.sender] -= 1;
+    function upvote(bytes32 cid) maybeTokenGrant public {
+        require(balanceOf[msg.sender] >= upvoteCost, "not enough tokens to upvote");
+        balanceOf[msg.sender] -= upvoteCost;
 
         Song storage song = songs[cid];
         require(song.upvotes[msg.sender].index == 0, "you have already upvoted this song");
 
-        song.currentUpvotes++;
-        song.allTimeUpvotes++;
-        song.upvotes[msg.sender].index = song.currentUpvotes - proposalCost + 1;
-
-        // token.mint(1 * (10**token.decimals()), address(this));
+        song.currentUpvotes += upvoteCost;
+        song.allTimeUpvotes += upvoteCost;
+        song.upvotes[msg.sender].index = ((song.currentUpvotes - proposalCost) / (10 ** DECIMALS)) + 1;
 
         emit SongUpvoted(msg.sender, cid);
     }
@@ -125,7 +134,7 @@ contract Chart
 
         uint delta = block.number - song.submittedInBlock;
         // @@TODO: this way of calculating decay is completely arbitrary
-        return song.allTimeUpvotes * (1 / (delta + 1));
+        return song.allTimeUpvotes / (delta + 1);
     }
 }
 

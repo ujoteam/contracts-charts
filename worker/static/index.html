@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ujo Charts</title>
+</head>
+
+<style>
+    #leaderboard {
+        text-align: left;
+        font-family: Consolas, 'Courier New', monospace;
+    }
+
+    #leaderboard td, #leaderboard th {
+        padding: 0 20px;
+    }
+
+    #leaderboard .wrapper {
+        display: flex;
+    }
+
+    #leaderboard .wrapper .score {
+        width: 150px;
+    }
+</style>
+
+<body>
+
+<div>
+    <div>
+        <div>Account: <select id="accounts"></select></div>
+        <div>Tokens: <span id="num-tokens"></span></div>
+    </div>
+    <br/><br/>
+
+    <div>
+        <input id="new-cid" style="width: 400px;" /><br />
+        <button id="btn-add-cid">Add new song</button>
+        <button id="btn-generate-cid">Generate random CID</button>
+    </div>
+</div>
+
+<h4>Leaderboard</h4>
+<table id="leaderboard">
+    <thead>
+        <tr>
+            <th>cid</th>
+            <th>score</th>
+            <th>upvotes</th>
+            <th>proposed in block</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    </tbody>
+</table>
+
+<button id="btn-clear-redis">Clear Redis cache</button>
+
+<script src="bundle.js"></script>
+</body>
+</html>
