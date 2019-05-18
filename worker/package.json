@@ -1,0 +1,25 @@
+{
+  "name": "worker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "build-js": "browserify ./static/index.js | babel > ./static/bundle.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bignumber.js": "^8.1.1",
+    "bluebird": "^3.5.4",
+    "express": "^4.17.0",
+    "ganache-cli": "^6.4.3",
+    "redis": "^2.8.0",
+    "web3": "^1.0.0-beta.55"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "browserify": "^16.2.3"
+  }
+}
