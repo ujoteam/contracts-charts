@@ -7,6 +7,8 @@ const redis = require('redis')
 const BigNumber = require('bignumber.js')
 const express = require('express')
 
+const chartContractJson = require(path.join(process.env.CONTRACT_JSON_ROOT, 'Chart.json'), 'utf8')
+
 let web3
 let chartContract
 let redisClient
@@ -27,7 +29,6 @@ async function main() {
 
     ethAccounts = await web3.eth.getAccounts() // we use this as a health check
 
-    const chartContractJson = JSON.parse(fs.readFileSync(path.join(process.env.CONTRACT_JSON_ROOT, 'Chart.json'), 'utf8'))
     const currentNetwork = await web3.eth.net.getId()
 
     if (!chartContractJson.networks[currentNetwork] || !chartContractJson.networks[currentNetwork].address) {
@@ -58,19 +59,27 @@ async function main() {
 
 const DECIMALS = new BigNumber(10).pow(18)
 
-async function getSong(cid) {
+async function getSong(cid, currentBlockNumber) {
     let { submittedInBlock, currentUpvotes, allTimeUpvotes } = await chartContract.methods.songs(cid).call()
     submittedInBlock = new BigNumber(submittedInBlock.toString())
     currentUpvotes   = new BigNumber(currentUpvotes.toString()).div(DECIMALS)
     allTimeUpvotes   = new BigNumber(allTimeUpvotes.toString()).div(DECIMALS)
-    return { submittedInBlock, currentUpvotes, allTimeUpvotes }
-}
 
-async function getSongScore(song) {
-    let blockNumber = await web3.eth.getBlockNumber()
-    blockNumber = new BigNumber(blockNumber.toString())
-    const delta = blockNumber.minus(song.submittedInBlock)
-    return song.allTimeUpvotes.div( delta.times(0.2).plus(1) )
+    const { timestamp } = await web3.eth.getBlock(submittedInBlock)
+
+    // Calculate the song's score for the currentBlockNumber
+    currentBlockNumber = new BigNumber(currentBlockNumber.toString())
+    const delta = currentBlockNumber.minus(submittedInBlock)
+    const score = allTimeUpvotes.div( delta.times(0.2).plus(1) )
+
+    return {
+        cid,
+        submittedInBlock: submittedInBlock.toString(),
+        currentUpvotes: currentUpvotes.toString(),
+        allTimeUpvotes: allTimeUpvotes.toString(),
+        proposalTimestamp: timestamp,
+        score,
+    }
 }
 
 async function startWorker() {
@@ -78,15 +87,14 @@ async function startWorker() {
     async function loop() {
         const events = await chartContract.getPastEvents('SongProposed', { fromBlock: 0, toBlock: 'latest' })
         const cids = events.map(e => e.returnValues.cid)
+        const blockNumber = new BigNumber( (await web3.eth.getBlockNumber()).toString() )
 
         for (let cid of cids) {
-            const song = await getSong(cid)
-            const score = await getSongScore(song)
-            song.submittedInBlock = song.submittedInBlock.toString()
-            song.currentUpvotes = song.currentUpvotes.toString()
-            song.allTimeUpvotes = song.allTimeUpvotes.toString()
-            await redisClient.zaddAsync('leaderboard', score.toString(), cid)
-            await redisClient.hsetAsync('songs', cid, JSON.stringify(song))
+            const song = await getSong(cid, blockNumber)
+
+            await redisClient.zaddAsync('songs:list:by-score', song.score.toString(), cid)
+            await redisClient.zaddAsync('songs:list:by-proposal-timestamp', song.proposalTimestamp, cid)
+            await redisClient.hsetAsync('songs:map', cid, JSON.stringify(song))
         }
 
         setTimeout(loop, 1000)
@@ -102,21 +110,38 @@ function startHTTPServer() {
     app.use(express.static('static'))
 
     app.get('/clear-redis', async (req, res) => {
-        redisClient.del('leaderboard')
-        redisClient.del('songs')
+        redisClient.del('songs:list:by-score')
+        redisClient.del('songs:list:by-proposal-timestamp')
+        redisClient.del('songs:map')
         res.json({})
     })
 
     app.get('/leaderboard', async (req, res) => {
         const { offset = 0, limit = 10 } = req.query
-        const items = await redisClient.zrevrangeAsync('leaderboard', offset, offset + limit, 'WITHSCORES')
+        const items = await redisClient.zrevrangeAsync('songs:list:by-score', offset, offset + limit, 'WITHSCORES')
         const list = []
         for (let i = 0; i < items.length/2; i++) {
             const cid = items[i*2]
-            const x = await redisClient.hgetAsync('songs', cid)
+            const x = await redisClient.hgetAsync('songs:map', cid)
             const song = JSON.parse(x)
             list.push({ ...song, cid, score: items[i*2+1] })
         }
+
+        res.json(list)
+    })
+
+    app.get('/songs', async (req, res) => {
+        let { reverse = '0', offset = 0, limit = 10 } = req.query
+
+        reverse = reverse === '0' ? false : true
+
+        const cids = reverse
+            ? await redisClient.zrangeAsync('songs:list:by-proposal-timestamp', offset, offset + limit)
+            : await redisClient.zrevrangeAsync('songs:list:by-proposal-timestamp', offset, offset + limit)
+
+        const list = await Promise.all(
+            cids.map(cid => redisClient.hgetAsync('songs:map', cid).then(JSON.parse))
+        )
 
         res.json(list)
     })
