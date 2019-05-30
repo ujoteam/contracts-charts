@@ -1,5 +1,5 @@
 const Chart = artifacts.require("Chart");
 
 module.exports = function(deployer) {
-  deployer.deploy(Chart, 0, 1);
+  deployer.deploy(Chart, 1, 1);
 };
