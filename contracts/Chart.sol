@@ -1,8 +1,10 @@
-pragma solidity 0.5.0;
+pragma solidity 0.5.8;
 
-contract Chart
+import "./RealMath.sol";
+
+contract Chart is RealMath
 {
-    uint constant DECIMALS = 18;
+    uint public constant DECIMALS = 6;
     PayoutCurve public payoutCurve;
     uint public proposalCost;
     uint public upvoteCost = 1 * (10 ** DECIMALS);
@@ -24,6 +26,8 @@ contract Chart
         uint currentUpvotes;
         // Tracks the total number of tokenized votes this song has received.  We use this to rank songs.
         uint allTimeUpvotes;
+        // Tracks the number of upvoters (!= allTimeUpvotes when upvoteCost != 1)
+        uint numUpvoters;
         // Maps a user's address to their place in the "queue" of users who have upvoted this song.  Used to calculate withdrawable amounts.
         mapping(address => Upvote) upvotes;
     }
@@ -35,7 +39,12 @@ contract Chart
 
     mapping(bytes32 => Song) public songs;
     mapping(address => uint) public balanceOf; // token balances
-    mapping(address => bool) knownAddresses;
+
+    // This mapping tracks which addresses we've seen before.  If an address has never been seen, and
+    // its balance is 0, then it receives a token grant the first time it proposes or upvotes a song.
+    // This helps us prevent users from re-upping on tokens every time they hit a 0 balance.
+    mapping(address => bool) public receivedTokenGrant;
+    uint public tokenGrantSize = 100 * (10 ** DECIMALS);
 
     //
     // Events
@@ -49,15 +58,15 @@ contract Chart
     //
 
     modifier maybeTokenGrant {
-        if (knownAddresses[msg.sender] == false) {
-            knownAddresses[msg.sender] = true;
-            balanceOf[msg.sender] = 100 * (10 ** DECIMALS);
+        if (receivedTokenGrant[msg.sender] == false) {
+            receivedTokenGrant[msg.sender] = true;
+            balanceOf[msg.sender] += tokenGrantSize;
         }
         _;
     }
 
     function propose(bytes32 cid) maybeTokenGrant public {
-        require(songs[cid].submittedInBlock == 0, "already proposed");
+        require(songs[cid].numUpvoters == 0, "already proposed");
         require(balanceOf[msg.sender] >= proposalCost, "not enough tokens to propose");
 
         Song storage song = songs[cid];
@@ -66,7 +75,8 @@ contract Chart
         balanceOf[msg.sender] -= proposalCost;
         song.currentUpvotes += proposalCost;
         song.allTimeUpvotes += proposalCost;
-        song.upvotes[msg.sender].index = 1;
+        song.numUpvoters++;
+        song.upvotes[msg.sender].index = song.numUpvoters;
 
         emit SongProposed(msg.sender, cid);
     }
@@ -80,7 +90,8 @@ contract Chart
 
         song.currentUpvotes += upvoteCost;
         song.allTimeUpvotes += upvoteCost;
-        song.upvotes[msg.sender].index = ((song.currentUpvotes - proposalCost) / (10 ** DECIMALS)) + 1;
+        song.numUpvoters++;
+        song.upvotes[msg.sender].index = song.numUpvoters;
 
         emit SongUpvoted(msg.sender, cid);
     }
@@ -108,13 +119,31 @@ contract Chart
 
     function getWithdrawableAmount(address user, bytes32 cid) public view returns (uint) {
         Song storage song = songs[cid];
-        uint i = song.upvotes[user].index;
-        uint t = song.allTimeUpvotes;
+
+        if (song.upvotes[user].index == 0) {
+            return 0;
+        }
 
         if (payoutCurve == PayoutCurve.Linear) {
+            uint i = song.upvotes[user].index - 1;
+            uint t = song.allTimeUpvotes;
             return (((uint(-2) * i) - 1) / t) + 2;
+
         } else if (payoutCurve == PayoutCurve.Reciprocal) {
-            revert("not done yet");
+            uint i = song.upvotes[user].index - 1;
+            int128 t = div(toReal(int88(song.allTimeUpvotes)), toReal(int88(10**DECIMALS)));
+            int128 t_2 = ipow(t, 2);
+
+            int128 a = ln(toReal(int88((i+2)**2)));
+            int128 b = ln(toReal(int88((i+1)**2)));
+            int128 c = ln(toReal(1) + t);
+
+            int128 numerator   = mul(t_2, a) - mul(t_2, b) + mul(t, a) - mul(t, b) - mul(toReal(2), t);
+            int128 denominator = mul(toReal(2), c + mul(t, toReal(-1)+c));
+            int128 amount = div(numerator, denominator);
+            amount = mul(amount, toReal(int88(10**DECIMALS)));
+            return uint(fromReal(amount));
+
         } else {
             revert("unknown payout curve");
         }
@@ -128,9 +157,17 @@ contract Chart
         return songs[cid].allTimeUpvotes;
     }
 
+    function getNumUpvoters(bytes32 cid) public view returns (uint) {
+        return songs[cid].numUpvoters;
+    }
+
+    function getUpvoteIndex(bytes32 cid, address user) public view returns (uint) {
+        return songs[cid].upvotes[user].index;
+    }
+
     function getSongScore(bytes32 cid) public view returns (uint) {
         Song storage song = songs[cid];
-        require(song.submittedInBlock > 0, "song doesn't exist");
+        require(song.numUpvoters > 0, "song doesn't exist");
 
         uint delta = block.number - song.submittedInBlock;
         // @@TODO: this way of calculating decay is completely arbitrary

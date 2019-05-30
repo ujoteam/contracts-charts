@@ -2,6 +2,8 @@ const Web3 = require('web3')
 const BigNumber = require('bignumber.js')
 const chartContractJson = require('../../build/contracts/Chart.json')
 
+const DECIMALS = new BigNumber(10).pow(6)
+
 let web3
 let chartContract
 let ethAccounts
@@ -20,35 +22,64 @@ async function init() {
 async function populateNumTokens() {
     const numTokensElem = document.getElementById('num-tokens')
     const acct = accountSelect.value
-    console.log('numTokens acct', accountSelect, accountSelect.value)
+
     let numTokens = await chartContract.methods.balanceOf(acct).call()
     numTokens = new BigNumber(numTokens.toString())
-    console.log('numTokens', numTokens)
-    const decimals = new BigNumber(10).pow(18)
-    console.log('decimals', decimals)
-    console.log('xyzzy', numTokens.div( decimals ))
-    numTokensElem.innerHTML = numTokens.div( decimals ).toString()
+
+    numTokensElem.innerHTML = numTokens.div( DECIMALS ).toString()
+}
+
+async function updateWithdrawableTokens() {
+    const currentAccount = accountSelect.value
+
+    const leaderboardData = await (await fetch('/leaderboard')).json()
+    const withdrawable = {}
+    const withdrawableList = await Promise.all(
+        leaderboardData.map(item => chartContract.methods.getWithdrawableAmount(currentAccount, item.cid).call())
+    )
+    withdrawableList.forEach((amt, i) => {
+        amt = new BigNumber( amt.toString() )
+        withdrawable[ leaderboardData[i].cid ] = amt.div(DECIMALS).toString()
+    })
+
+    document.querySelectorAll('#leaderboard td.withdrawable')
+        .forEach(elem => elem.innerHTML = withdrawable[elem.dataset.cid])
+}
+
+async function updateUpvoteIndices() {
+    const currentAccount = accountSelect.value
+    const leaderboardData = await (await fetch('/leaderboard')).json()
+    const indices = {}
+    for (let item of leaderboardData) {
+        const idx = new BigNumber( (await chartContract.methods.getUpvoteIndex(item.cid, currentAccount).call()).toString() )
+        indices[ item.cid ] = idx
+    }
+
+    document.querySelectorAll('#leaderboard td.upvote-index')
+        .forEach(elem => elem.innerHTML = indices[elem.dataset.cid].toString() )
 }
 
 async function populateLeaderboard() {
     const leaderboardData = await (await fetch('/leaderboard')).json()
     const leaderboardElem = document.querySelector('#leaderboard tbody')
-    leaderboardElem.innerHTML = leaderboardData.map(item => `
+
+    leaderboardElem.innerHTML = leaderboardData.map((item, i) => `
         <tr>
             <td>${item.cid.slice(0, 16)}...</td>
             <td>${parseFloat(item.score).toFixed(4)}</td>
             <td>${item.allTimeUpvotes}</td>
+            <td>${item.numUpvoters}</td>
+            <td class="upvote-index" data-cid="${item.cid}">upvote index</td>
             <td>${item.submittedInBlock}</td>
+            <td class="withdrawable" data-cid="${item.cid}"></td>
             <td><button class="upvote" data-cid="${item.cid}">Upvote</button></td>
         </tr>
     `).join('')
 
     const buttons = document.querySelectorAll('#leaderboard button.upvote')
     for (let button of buttons) {
-        button.addEventListener('click', (evt) => {
-            const { cid } = evt.target.dataset
-            console.log('upvote', cid)
-            upvoteCid(cid)
+        button.addEventListener('click', evt => {
+            upvoteCid(evt.target.dataset.cid)
         })
     }
 }
@@ -58,7 +89,7 @@ async function initWeb3() {
     web3 = new Web3('http://')
     web3.setProvider(provider)
 
-    ethAccounts = await web3.eth.getAccounts() // we use this as a health check
+    ethAccounts = await web3.eth.getAccounts()
 
     const currentNetwork = await web3.eth.net.getId()
 
@@ -93,9 +124,7 @@ async function initEventListeners() {
         setTimeout(populateLeaderboard, 1200)
     })
 
-    accountSelect.addEventListener('change', () => {
-        populateNumTokens()
-    })
+    accountSelect.addEventListener('change', updateUI)
 }
 
 async function proposeCid(cid) {
@@ -104,9 +133,8 @@ async function proposeCid(cid) {
     }
 
     cid = Buffer.from(cid, 'hex')
-    console.log('cid buf', cid.length, cid)
     chartContract.methods.propose(cid).send({ from: accountSelect.value, gas: 200000 }, () => {})
-    setTimeout(populateLeaderboard, 1500)
+    setTimeout(updateUI, 1500)
 }
 
 async function upvoteCid(cid) {
@@ -115,9 +143,14 @@ async function upvoteCid(cid) {
     }
 
     cid = Buffer.from(cid, 'hex')
-    console.log('cid buf', cid.length, cid)
     chartContract.methods.upvote(cid).send({ from: accountSelect.value, gas: 200000 }, () => {})
-    setTimeout(populateLeaderboard, 1500)
+    setTimeout(updateUI, 1500)
+}
+
+function updateUI() {
+    populateNumTokens()
+    updateWithdrawableTokens()
+    updateUpvoteIndices()
 }
 
 init()
