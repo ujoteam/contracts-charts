@@ -11,81 +11,20 @@ let ethAccounts
 const accountSelect = document.getElementById('accounts')
 
 async function init() {
-    await initWeb3()
-    accountSelect.innerHTML = ethAccounts.map(acct => `<option value="${acct}">${acct}</option>`).join('')
+    window.addEventListener('load', async () => {
+        await initWeb3()
+        accountSelect.innerHTML = ethAccounts.map(acct => `<option value="${acct}">${acct}</option>`).join('')
 
-    await initEventListeners()
-    await populateLeaderboard()
-    await populateNumTokens()
-}
-
-async function populateNumTokens() {
-    const numTokensElem = document.getElementById('num-tokens')
-    const acct = accountSelect.value
-
-    let numTokens = await chartContract.methods.balanceOf(acct).call()
-    numTokens = new BigNumber(numTokens.toString())
-
-    numTokensElem.innerHTML = numTokens.div( DECIMALS ).toString()
-}
-
-async function updateWithdrawableTokens() {
-    const currentAccount = accountSelect.value
-
-    const leaderboardData = await (await fetch('/leaderboard')).json()
-    const withdrawable = {}
-    const withdrawableList = await Promise.all(
-        leaderboardData.map(item => chartContract.methods.getWithdrawableAmount(currentAccount, item.cid).call())
-    )
-    withdrawableList.forEach((amt, i) => {
-        amt = new BigNumber( amt.toString() )
-        withdrawable[ leaderboardData[i].cid ] = amt.div(DECIMALS).toString()
+        await initEventListeners()
+        await updateUI()
     })
-
-    document.querySelectorAll('#leaderboard td.withdrawable')
-        .forEach(elem => elem.innerHTML = withdrawable[elem.dataset.cid])
-}
-
-async function updateUpvoteIndices() {
-    const currentAccount = accountSelect.value
-    const leaderboardData = await (await fetch('/leaderboard')).json()
-    const indices = {}
-    for (let item of leaderboardData) {
-        const idx = new BigNumber( (await chartContract.methods.getUpvoteIndex(item.cid, currentAccount).call()).toString() )
-        indices[ item.cid ] = idx
-    }
-
-    document.querySelectorAll('#leaderboard td.upvote-index')
-        .forEach(elem => elem.innerHTML = indices[elem.dataset.cid].toString() )
-}
-
-async function populateLeaderboard() {
-    const leaderboardData = await (await fetch('/leaderboard')).json()
-    const leaderboardElem = document.querySelector('#leaderboard tbody')
-
-    leaderboardElem.innerHTML = leaderboardData.map((item, i) => `
-        <tr>
-            <td>${item.cid.slice(0, 16)}...</td>
-            <td>${parseFloat(item.score).toFixed(4)}</td>
-            <td>${item.allTimeUpvotes}</td>
-            <td>${item.numUpvoters}</td>
-            <td class="upvote-index" data-cid="${item.cid}">upvote index</td>
-            <td>${item.submittedInBlock}</td>
-            <td class="withdrawable" data-cid="${item.cid}"></td>
-            <td><button class="upvote" data-cid="${item.cid}">Upvote</button></td>
-        </tr>
-    `).join('')
-
-    const buttons = document.querySelectorAll('#leaderboard button.upvote')
-    for (let button of buttons) {
-        button.addEventListener('click', evt => {
-            upvoteCid(evt.target.dataset.cid)
-        })
-    }
 }
 
 async function initWeb3() {
-    const provider = new Web3.providers.HttpProvider(process.env.ETH_NODE_HOST)
+    const provider = window.web3 !== undefined
+        ? window.web3.currentProvider                                // use Metamask, et al. if available
+        : new Web3.providers.HttpProvider(process.env.ETH_NODE_HOST) // this is just for local testing
+
     web3 = new Web3('http://')
     web3.setProvider(provider)
 
@@ -101,14 +40,14 @@ async function initWeb3() {
 }
 
 async function initEventListeners() {
-    const inputNewCid = document.getElementById('new-cid')
+    const inputNewCid = document.querySelector('#new-cid')
 
-    document.getElementById('btn-add-cid').addEventListener('click', async () => {
+    document.querySelector('#btn-add-cid').addEventListener('click', async () => {
         await proposeCid(inputNewCid.value)
         inputNewCid.value = ''
     })
 
-    document.getElementById('btn-generate-cid').addEventListener('click', () => {
+    document.querySelector('#btn-generate-cid').addEventListener('click', () => {
         let result = ''
         const characters = 'abcdef0123456789'
         const charactersLength = characters.length
@@ -118,10 +57,10 @@ async function initEventListeners() {
         inputNewCid.value = result
     })
 
-    document.getElementById('btn-clear-redis').addEventListener('click', async () => {
+    document.querySelector('#btn-clear-redis').addEventListener('click', async () => {
+        document.querySelector('#leaderboard tbody').innerHTML = ''
         await fetch('/clear-redis')
-        await populateLeaderboard()
-        setTimeout(populateLeaderboard, 1200)
+        setTimeout(updateUI, 1200)
     })
 
     accountSelect.addEventListener('change', updateUI)
@@ -147,10 +86,64 @@ async function upvoteCid(cid) {
     setTimeout(updateUI, 1500)
 }
 
-function updateUI() {
+async function updateUI() {
+    const currentAccount = accountSelect.value
+    const leaderboardData = await (await fetch('/leaderboard')).json()
+
+    async function populateNumTokens() {
+        let numTokens = await chartContract.methods.balanceOf(currentAccount).call()
+        numTokens = new BigNumber(numTokens.toString())
+        document.querySelector('#num-tokens').innerHTML = numTokens.div( DECIMALS ).toString()
+    }
+
+    async function populateLeaderboard() {
+        const leaderboardElem = document.querySelector('#leaderboard tbody')
+
+        // fetch withdrawable token balances
+        const withdrawableBalances = {}
+        const withdrawableBalancesList = await Promise.all(
+            leaderboardData.map(item => chartContract.methods.getWithdrawableAmount(currentAccount, item.cid).call())
+        )
+        for (let [i, balance] of enumerate(withdrawableBalancesList)) {
+            withdrawableBalances[ leaderboardData[i].cid ] = new BigNumber( balance.toString() ).div(DECIMALS).toString()
+        }
+
+        // fetch upvote indices
+        const upvoteIndices = {}
+        for (let item of leaderboardData) {
+            const idx = new BigNumber( (await chartContract.methods.getUpvoteIndex(item.cid, currentAccount).call()).toString() )
+            upvoteIndices[ item.cid ] = idx
+        }
+
+        leaderboardElem.innerHTML = leaderboardData.map(item => `
+            <tr>
+                <td>${item.cid.slice(0, 16)}...</td>
+                <td>${parseFloat(item.score).toFixed(4)}</td>
+                <td>${item.allTimeUpvotes}</td>
+                <td>${item.numUpvoters}</td>
+                <td>${upvoteIndices[item.cid]}</td>
+                <td>${item.submittedInBlock}</td>
+                <td>${withdrawableBalances[item.cid]}</td>
+                <td><button class="upvote" data-cid="${item.cid}">Upvote</button></td>
+            </tr>
+        `).join('')
+
+        const buttons = document.querySelectorAll('#leaderboard button.upvote')
+        for (let button of buttons) {
+            button.addEventListener('click', evt => {
+                upvoteCid(evt.target.dataset.cid)
+            })
+        }
+    }
+
     populateNumTokens()
-    updateWithdrawableTokens()
-    updateUpvoteIndices()
+    populateLeaderboard()
+}
+
+function* enumerate(list) {
+    for (let i = 0; i < list.length; i++) {
+        yield [i, list[i]]
+    }
 }
 
 init()

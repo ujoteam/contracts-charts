@@ -21,8 +21,7 @@ async function main() {
 
     // web3 = new Web3(process.env.ETH_NODE_HOST)
 
-    // This idiotic workaround is due to the poor architecture and maintainership of web3.js
-    // See https://github.com/ethereum/web3.js/issues/2786
+    // This is an idiotic workaround. See https://github.com/ethereum/web3.js/issues/2786
     const provider = new Web3.providers.HttpProvider(process.env.ETH_NODE_HOST)
     web3 = new Web3('http://')
     web3.setProvider(provider)
