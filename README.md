@@ -36,6 +36,16 @@ Smart contracts for curation markets, charts, etc.
 
 ## III. Payout curve
 
+Some fundamentals:
+- `t` is the total number of tokens/upvotes deposited into a song
+- `i` is a 0-based index describing the order in which users upvoted a given song (the first user to upvote a song is `0`, etc.)
+- Our model for calculating payouts uses the area under a curve between `[i, i+1]` to determine the payout for user `i`.  For example: the first user to upvote a song is user `0`, and their payout is the area between `[0, 1]` on the given payout curve.
+- Any curve that we choose for this model must always intersects the x-axis at `x = t`.
+- The total area under the curve must always equal `t`.
+- As more users upvote a given song, the curve changes (generally shifting outward, away from the x and y axes).
+
+![](withdraw-curve-basic-idea.jpg)
+
 **Linear:**
 - Variations on `y = 1 - x`
 - Doesn't really do much to incentivize early upvoters, as your withdrawable amount doesn't really increase much as other users upvote after you.
@@ -62,6 +72,11 @@ These constraints come from the particular way we've chosen to model the problem
 Here's the math on a whiteboard:
 
 ![](withdraw-curve-derivation--linear.jpg)
+
+
+Here's the (already-derived) formula for the reciprocal payout curve:
+
+![](withdraw-curve--reciprocal.png)
 
 
 ## IV. Withdrawals
