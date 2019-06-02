@@ -96,21 +96,25 @@ contract Chart is RealMath
         emit SongUpvoted(msg.sender, cid);
     }
 
-    function withdraw(bytes32 cid) public {
-        Song storage song = songs[cid];
+    function withdraw(bytes32[] memory cids) public {
+        for (uint i = 0; i < cids.length; i++) {
+            bytes32 cid = cids[i];
 
-        require(song.upvotes[msg.sender].index > 0, "you don't have any tokens stored in this song");
+            Song storage song = songs[cid];
 
-        uint totalWithdrawable = getWithdrawableAmount(msg.sender, cid);
-        uint alreadyWithdrawn = song.upvotes[msg.sender].withdrawnAmount;
-        uint amountToWithdraw = totalWithdrawable - alreadyWithdrawn;
+            require(song.upvotes[msg.sender].index > 0, "you don't have any tokens stored in this song");
 
-        require(song.currentUpvotes >= amountToWithdraw, "calculated withdrawal amount is greater than remaining token supply for this song");
+            uint totalWithdrawable = getWithdrawableAmount(msg.sender, cid);
+            uint alreadyWithdrawn = song.upvotes[msg.sender].withdrawnAmount;
+            uint amountToWithdraw = totalWithdrawable - alreadyWithdrawn;
 
-        song.upvotes[msg.sender].withdrawnAmount = totalWithdrawable;
+            require(song.currentUpvotes >= amountToWithdraw, "calculated withdrawal amount is greater than remaining token supply for this song");
 
-        song.currentUpvotes -= amountToWithdraw;
-        balanceOf[msg.sender] += amountToWithdraw;
+            song.upvotes[msg.sender].withdrawnAmount = totalWithdrawable;
+
+            song.currentUpvotes -= amountToWithdraw;
+            balanceOf[msg.sender] += amountToWithdraw;
+        }
     }
 
     //

@@ -58,6 +58,8 @@ Some fundamentals:
 
 To derive the payout curves, we first start by choosing a general "family" of equations (linear, reciprocal, etc.).  This gives us a very general shape of the eventual curve that can already help us start to predict the dynamics of our prediction/curation market.
 
+**Linear:**
+
 For example, let's take the 'linear' family.  The simplest curve in this family is `y = 1 - x`.  The fully-generalized curve is `y = a - bx`.  For our case, we know that we must also consider `t` (the total token supply for a given market) and construct the equation in such a way that changing `t` also changes the curve.  Synthesizing all of this together, we might end up with something like `y = at - btx` (there are probably several possibilities here, but this seems pretty sane).
 
 Now that we have the generalized equation, we apply two important constraints:
@@ -74,7 +76,13 @@ Here's the math on a whiteboard:
 ![](withdraw-curve-derivation--linear.jpg)
 
 
-Here's the (already-derived) formula for the reciprocal payout curve:
+**Reciprocal:**
+
+Here's the math for an equation from the reciprocal family:
+
+![](withdraw-curve-derivation--reciprocal.jpg)
+
+(The final equation from the reciprocal family, much easier to read):
 
 ![](withdraw-curve--reciprocal.png)
 

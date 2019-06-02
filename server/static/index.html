@@ -21,15 +21,54 @@
     #leaderboard .wrapper .score {
         width: 150px;
     }
+
+    header {
+        display: flex;
+    }
+
+    header > div {
+        width: 45%;
+    }
+
+    #transaction-pending {
+        display: none;
+        color: red;
+        font-family: Consolas, 'Courier New', monospace;
+    }
+    #transaction-pending.show {
+        display: flex;
+    }
+
+    .loader {
+        border: 8px solid #f3f3f3;
+        border-top: 8px solid #3498db;
+        border-radius: 50%;
+        width: 10px;
+        height: 10px;
+        animation: spin 1s linear infinite;
+        margin-right: 10px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
 </style>
 
 <body>
 
 <div>
-    <div>
-        <div>Account: <select id="accounts"></select></div>
-        <div>Tokens: <span id="num-tokens"></span></div>
-    </div>
+    <header>
+        <div>
+            <div>Account: <select id="accounts"></select></div>
+            <div>Tokens: <span id="num-tokens"></span></div>
+        </div>
+
+        <div id="transaction-pending">
+            <div class="loader"></div>
+            Transaction pending...
+        </div>
+    </header>
     <br/><br/>
 
     <div>
@@ -38,6 +77,7 @@
         <button id="btn-generate-cid">Generate random CID</button>
     </div>
 </div>
+
 
 <h4>Leaderboard</h4>
 <table id="leaderboard">
