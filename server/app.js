@@ -5,9 +5,11 @@ import Web3 from 'web3'
 import redis from 'redis'
 import BigNumber from 'bignumber.js'
 import express from 'express'
+import HDWalletProvider from 'truffle-hdwallet-provider'
 import HTTPError from './util/HTTPError'
 
-const chartContractJson = require(path.join(process.env.CONTRACT_JSON_ROOT, 'Chart.json'), 'utf8')
+const chartContractJsonRoot = process.env.CONTRACT_JSON_ROOT || path.join(__dirname, 'static')
+const chartContractJson = require(path.join(chartContractJsonRoot, 'Chart.json'))
 
 let web3
 let chartContract
@@ -19,14 +21,18 @@ async function main() {
     // Initialize web3
     //
 
-    // web3 = new Web3(process.env.ETH_NODE_HOST)
-
-    // This is an idiotic workaround. See https://github.com/ethereum/web3.js/issues/2786
-    const provider = new Web3.providers.HttpProvider(process.env.ETH_NODE_HOST)
-    web3 = new Web3('http://')
-    web3.setProvider(provider)
+    if (process.env.BACKEND_MNEMONIC) {
+        web3 = new Web3(new HDWalletProvider(process.env.BACKEND_MNEMONIC, process.env.ETH_NODE_HOST))
+    } else {
+        // web3 = new Web3(process.env.ETH_NODE_HOST)
+        // This is an idiotic workaround. See https://github.com/ethereum/web3.js/issues/2786
+        const provider = new Web3.providers.HttpProvider(process.env.ETH_NODE_HOST)
+        web3 = new Web3('http://')
+        web3.setProvider(provider)
+    }
 
     const ethAccounts = await web3.eth.getAccounts()
+    console.log('eth accounts:', ethAccounts)
     serverEthAccount = ethAccounts[ethAccounts.length - 1]
 
     const currentNetwork = await web3.eth.net.getId()
@@ -86,20 +92,25 @@ async function startWorker() {
         }
     }
 
+    // const cursor = (await redisClient.getAsync('log-cursor:SongProposed')) || '0:0'
+    // let [blockCursor, logCursor] = cursor.split(':')
+    // blockCursor = parseInt(blockCursor, 10)
+    // logCursor   = parseInt(logCursor, 10)
+
     async function loop() {
         const events = await chartContract.getPastEvents('SongProposed', { fromBlock: 0, toBlock: 'latest' })
         const cids = events.map(e => e.returnValues.cid)
-        const blockNumber = new BigNumber( (await web3.eth.getBlockNumber()).toString() )
+        const currentBlockNumber = new BigNumber( (await web3.eth.getBlockNumber()).toString() )
 
         for (let cid of cids) {
-            const song = await getSong(cid, blockNumber)
+            const song = await getSong(cid, currentBlockNumber)
 
             await redisClient.zaddAsync('songs:list:by-score', song.score.toString(), cid)
             await redisClient.zaddAsync('songs:list:by-proposal-timestamp', song.proposalTimestamp, cid)
             await redisClient.hsetAsync('songs:map', cid, JSON.stringify(song))
         }
 
-        setTimeout(loop, 1000)
+        setTimeout(loop, 8000)
     }
 
     loop()
@@ -111,20 +122,22 @@ function startHTTPServer() {
 
     app.use(express.static('static'))
 
+    const asyncMW = fn => (req, res, next) => { Promise.resolve(fn(req, res, next)).catch(next) }
+
     //
     // Clear all cached data from Redis
     //
-    app.get('/clear-redis', async (req, res) => {
+    app.get('/clear-redis', asyncMW(async (req, res) => {
         redisClient.del('songs:list:by-score')
         redisClient.del('songs:list:by-proposal-timestamp')
         redisClient.del('songs:map')
         res.json({})
-    })
+    }))
 
     //
     // Fetch songs ordered by their leaderboard score
     //
-    app.get('/leaderboard', async (req, res) => {
+    app.get('/leaderboard', asyncMW(async (req, res) => {
         let { offset = '0', limit = '10' } = req.query
         offset = parseInt(offset, 10)
         limit  = parseInt(limit, 10)
@@ -139,17 +152,15 @@ function startHTTPServer() {
         }
 
         res.json(list)
-    })
+    }))
 
     //
     // Fetch songs ordered by their proposal date/time
     //
-    app.get('/songs', async (req, res) => {
+    app.get('/songs', asyncMW(async (req, res) => {
         let { reverse = '0', offset = '0', limit = '10' } = req.query
         offset = parseInt(offset, 10)
         limit  = parseInt(limit, 10)
-
-        console.log({offset, limit})
 
         reverse = reverse === '0' ? false : true
 
@@ -162,18 +173,18 @@ function startHTTPServer() {
         )
 
         res.json(list)
-    })
+    }))
 
     //
     // Replenish the requesting user's ETH
     //
-    app.get('/faucet', async (req, res, next) => {
-        const { address, amount } = req.query
+    app.get('/faucet', asyncMW(async (req, res, next) => {
+        let { address, amount = '1' } = req.query
         if (!address) {
             throw new HTTPError(400, 'Missing field: address')
-        } else if (!amount) {
-            throw new HTTPError(400, 'Missing field: amount')
         }
+
+        amount = parseInt(amount, 10)
 
         const maxFaucetSendAmount = process.env.MAX_FAUCET_SEND_AMOUNT || 1
 
@@ -188,7 +199,7 @@ function startHTTPServer() {
         const tx = await web3.eth.sendTransaction({ from: serverEthAccount, to: address, value: wei })
 
         return res.status(200).json({ result: 'sent you some ETH' })
-    })
+    }))
 
     //
     // Error handler

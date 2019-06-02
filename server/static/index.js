@@ -21,12 +21,22 @@ async function init() {
 }
 
 async function initWeb3() {
-    const provider = window.web3 !== undefined
-        ? window.web3.currentProvider                                // use Metamask, et al. if available
-        : new Web3.providers.HttpProvider(process.env.ETH_NODE_HOST) // this is just for local testing
+    if (window.ethereum) {
+        web3 = new Web3(window.ethereum)
+        // try {
+        await ethereum.enable() // Request account access if needed
+        // } catch (error) {
+        //     // User denied account access
+        // }
+    } else if (window.web3 !== undefined) {
+        // use Metamask, et al. if available
+        web3 = new Web3(window.web3.currentProvider)
+    } else {
+        // this is just for local testing
+        web3 = new Web3('http://')
+        web3.setProvider(new Web3.providers.HttpProvider(process.env.ETH_NODE_HOST))
+    }
 
-    web3 = new Web3('http://')
-    web3.setProvider(provider)
 
     ethAccounts = await web3.eth.getAccounts()
 
@@ -66,14 +76,32 @@ async function initEventListeners() {
     accountSelect.addEventListener('change', updateUI)
 }
 
+function showTransactionPendingIndicator(show) {
+    const elem = document.getElementById('transaction-pending')
+    if (show) {
+        elem.classList.add('show')
+    } else {
+        elem.classList.remove('show')
+    }
+}
+
 async function proposeCid(cid) {
     if (cid.indexOf('0x') === 0) {
         cid = cid.slice(2)
     }
 
     cid = Buffer.from(cid, 'hex')
-    chartContract.methods.propose(cid).send({ from: accountSelect.value, gas: 200000 }, () => {})
-    setTimeout(updateUI, 1500)
+
+    showTransactionPendingIndicator(true)
+
+    const tx = chartContract.methods.propose(cid).send({ from: accountSelect.value, gas: 200000 })
+    tx.on('receipt', () => {
+        console.log('receipt')
+        setTimeout(() => {
+            updateUI()
+            showTransactionPendingIndicator(false)
+        }, 1200)
+    })
 }
 
 async function upvoteCid(cid) {
@@ -82,8 +110,17 @@ async function upvoteCid(cid) {
     }
 
     cid = Buffer.from(cid, 'hex')
-    chartContract.methods.upvote(cid).send({ from: accountSelect.value, gas: 200000 }, () => {})
-    setTimeout(updateUI, 1500)
+
+    showTransactionPendingIndicator(true)
+
+    const tx = chartContract.methods.upvote(cid).send({ from: accountSelect.value, gas: 200000 }, () => {})
+    tx.on('receipt', () => {
+        console.log('receipt')
+        setTimeout(() => {
+            updateUI()
+            showTransactionPendingIndicator(false)
+        }, 1200)
+    })
 }
 
 async function updateUI() {
