@@ -1,6 +1,30 @@
-# contracts-curation
+# Charts
 
 Smart contracts for curation markets, charts, etc.
+
+**Table of contents**
+
+- [Overview](#overview)
+- [Incentive design considerations](#incentive-design-considerations)
+    - [Are tokens tradable?](#i-are-tokens-tradable)
+    - [Token supply](#ii-token-supply)
+    - [Payout curve](#iii-payout-curve)
+        - [Deriving the payout curves](#deriving-the-payout-curves)
+    - [Withdrawals](#iv-withdrawals)
+
+# Overview
+
+The 'charts' contract in this repository creates a tokenized leaderboard where users rank pieces of content against one another.
+
+The basic mechanism is simple: a user can propose a piece of content (a song, an article, etc.) by submitting it to the contract, which costs some tokens.  Other users can upvote that content, which also costs tokens.  This creates a token pool.  Users who were earlier to upvote a given piece of content are entitled to withdraw more tokens than those who upvoted later.
+
+For example, an early upvoter might submit a single token to a song, but might eventually be able to withdraw hundreds of tokens as a reward.  A later upvoter might submit a single token, but might only be able to withdraw a fraction of that token.
+
+Why this particular design?  The hypothesis is that, by rewarding users who were able to spot high-quality content earlier than anyone else, we will establish a leaderboard that rewards the curation of previously-unknown content more highly than well-known content.
+
+This model is deceptively simple: there are a number of parameters that need to be considered in detail that will undoubtedly affect users' behavior.  These are detailed in the following section.
+
+
 
 
 # Incentive design considerations
