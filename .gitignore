@@ -1,3 +1,4 @@
 node_modules/
 build/*.zip
 .envrc
+server/static/bundle.js
