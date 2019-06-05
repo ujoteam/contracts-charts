@@ -179,14 +179,14 @@ function startHTTPServer() {
     // Replenish the requesting user's ETH
     //
     app.get('/faucet', asyncMW(async (req, res, next) => {
-        let { address, amount = '1' } = req.query
+        let { address, amount = '0.2' } = req.query
         if (!address) {
             throw new HTTPError(400, 'Missing field: address')
         }
 
-        amount = parseInt(amount, 10)
+        amount = parseFloat(amount)
 
-        const maxFaucetSendAmount = process.env.MAX_FAUCET_SEND_AMOUNT || 1
+        const maxFaucetSendAmount = process.env.MAX_FAUCET_SEND_AMOUNT || 0.2
 
         // If the user already has enough ETH, don't do anything.
         const balance = web3.utils.toBN( await web3.eth.getBalance(address) )
