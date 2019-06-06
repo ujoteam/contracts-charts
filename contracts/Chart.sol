@@ -52,6 +52,7 @@ contract Chart is RealMath
 
     event SongProposed(address indexed proposer, bytes32 cid);
     event SongUpvoted(address indexed upvoter, bytes32 cid);
+    event Withdrawal(address indexed withdrawer, bytes32 cid, uint tokens);
 
     //
     // Upvote mechanism
@@ -114,6 +115,8 @@ contract Chart is RealMath
 
             song.currentUpvotes -= amountToWithdraw;
             balanceOf[msg.sender] += amountToWithdraw;
+
+            emit Withdrawal(msg.sender, cid, amountToWithdraw);
         }
     }
 
@@ -151,6 +154,14 @@ contract Chart is RealMath
         } else {
             revert("unknown payout curve");
         }
+    }
+
+    function getWithdrawableAmountRemaining(address user, bytes32 cid) public view returns (uint) {
+        return getWithdrawableAmount(user, cid) - getWithdrawnAmount(user, cid);
+    }
+
+    function getWithdrawnAmount(address user, bytes32 cid) public view returns (uint) {
+        return songs[cid].upvotes[user].withdrawnAmount;
     }
 
     function getCurrentUpvotes(bytes32 cid) public view returns (uint) {
