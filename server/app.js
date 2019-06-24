@@ -22,7 +22,7 @@ async function main() {
     // Initialize the background workers
     startIntervalJob(pollContractForEvents, 'songs:worker:poll-contract:last-run', 3)
     startIntervalJob(updateSongScore,       'songs:worker:update-song-score:last-run', 5)
-    // startIntervalJob(reportTrendingSongs,   'songs:worker:report-trending:last-run', TRENDING_REPORT_INTERVAL_SECONDS, 10)
+    startIntervalJob(reportTrendingSongs,   'songs:worker:report-trending:last-run', TRENDING_REPORT_INTERVAL_SECONDS, 10)
     console.log('workers initialized')
 
     // Initialize the HTTP API

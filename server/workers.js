@@ -52,6 +52,7 @@ function calculateSongScore({ submittedInBlock, allTimeUpvotes }, currentBlockNu
 // blockCursor = parseInt(blockCursor, 10)
 // logCursor   = parseInt(logCursor, 10)
 export async function pollContractForEvents() {
+    console.log('[worker] pollContractForEvents')
     const fromBlockStr = await redis.client.getAsync('songs:block-cursor')
     const fromBlock = fromBlockStr ? parseInt(fromBlockStr, 10) + 1 : 0
     const toBlock = (await web3.eth.getBlock('latest')).number
@@ -94,6 +95,7 @@ export async function pollContractForEvents() {
 }
 
 export async function updateSongScore() {
+    console.log('[worker] updateSongScore')
     const currentBlockNumber = new BigNumber( (await web3.eth.getBlockNumber()).toString() )
 
     // @@TODO: use SSCAN, not SMEMBERS
@@ -105,11 +107,10 @@ export async function updateSongScore() {
 
         await redis.client.zaddAsync('songs:list:by-score', score, cid)
     }
-
-    setTimeout(updateSongScore, 5000)
 }
 
 export async function reportTrendingSongs() {
+    console.log('[worker] reportTrendingSongs')
     console.log('[trending] running trending song report...')
 
     const topItems = (await redis.client.zrevrangeAsync('songs:trending:yt', 0, 0)) || [] // @@TODO: don't hardcode 'yt' type
