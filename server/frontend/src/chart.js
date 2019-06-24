@@ -67,6 +67,11 @@ export async function initClient({ web3, chartContractAddress }) {
         },
 
         async fetchTokenBalance({ account }) {
+            let receivedTokenGrant = await client.contract.methods.receivedTokenGrant(account).call()
+            if (!receivedTokenGrant) {
+                return toBN(100)
+            }
+
             let bal = await client.contract.methods.balanceOf(account).call()
             return toBN( await client.contract.methods.balanceOf(account).call() ).div( client.DECIMALS )
         },

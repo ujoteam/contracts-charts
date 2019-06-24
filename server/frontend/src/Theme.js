@@ -30,17 +30,18 @@ const ujoTheme = createMuiTheme({
             verticalAlign: 'bottom',
             filter: 'hue-rotate(212deg) grayscale(33%) brightness(1.6)',
         }} />,
-        coinsImage: () => <img src={ujoCoinsImage} style={{
+        coinsImage: (props) => <img src={ujoCoinsImage} style={{
             width: 56,
             verticalAlign: 'bottom',
-        }} />,
+        }} {...props} />,
         accountBalancesFontStyles: {
             color: '#ec007f',
             fontFamily: `'Light Pixel'`,
             fontSize: '1.4rem',
         },
         cardTitleText: 'Electronic',
-        textSubmitCTA: 'Submit a song',
+        textSubmitContentCTA: 'Submit a song',
+        textSubmitContentInputFieldLabel: 'Enter a YouTube link',
         bgColorCardHeader: '#8428ff',
         fontColorCardHeader: 'white',
         fontCardHeader: 'Roboto',
@@ -52,6 +53,13 @@ const ujoTheme = createMuiTheme({
             const buf = Buffer.alloc(32)
             buf.write('yt:' + v)
             return buf
+        },
+        validateNewContentLink: (inputText) => {
+            const { hostname, query: { v } } = url.parse(inputText, true)
+            const valid = hostname && (hostname.indexOf('youtube.com') > -1 || hostname.indexOf('youtu.be') > -1)
+                && v && v.length === 11
+
+            return valid
         },
     },
 })
@@ -98,10 +106,10 @@ const decryptTheme = createMuiTheme({
             width: 32,
             verticalAlign: 'bottom',
         }} />,
-        coinsImage: () => <img src="https://conceptdraw.com/a1708c3/p9/preview/640/pict--coins-currency---vector-stencils-library.png--diagram-flowchart-example.png" style={{
+        coinsImage: (props) => <img src="https://conceptdraw.com/a1708c3/p9/preview/640/pict--coins-currency---vector-stencils-library.png--diagram-flowchart-example.png" style={{
             width: 56,
             verticalAlign: 'bottom',
-        }} />,
+        }} {...props} />,
         accountBalancesFontStyles: {
             color: '#afafaf',
             fontFamily: `'Canela Black'`,
@@ -110,7 +118,8 @@ const decryptTheme = createMuiTheme({
             // width: 27,
             // fontWeight: 700,
         },
-        textSubmitCTA: 'Submit an article',
+        textSubmitContentCTA: 'Submit an article',
+        textSubmitContentInputFieldLabel: 'Enter a Decrypt article URL',
         cardTitleText: 'Layer 2 solutions',
         bgColorCardHeader: '#444444',
         fontColorCardHeader: 'white',
@@ -122,6 +131,11 @@ const decryptTheme = createMuiTheme({
             const buf = Buffer.alloc(32)
             buf.write('decrypt:' + id)
             return buf
+        },
+        validateNewContentLink: (inputText) => {
+            const { hostname } = url.parse(inputText, true)
+            const valid = hostname && hostname.indexOf('decrypt.co') > -1
+            return valid
         },
     },
 })

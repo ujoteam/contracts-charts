@@ -51,7 +51,7 @@ function calculateSongScore({ submittedInBlock, allTimeUpvotes }, currentBlockNu
 // let [blockCursor, logCursor] = cursor.split(':')
 // blockCursor = parseInt(blockCursor, 10)
 // logCursor   = parseInt(logCursor, 10)
-async function pollContractForEvents() {
+export async function pollContractForEvents() {
     const fromBlockStr = await redis.client.getAsync('songs:block-cursor')
     const fromBlock = fromBlockStr ? parseInt(fromBlockStr, 10) + 1 : 0
     const toBlock = (await web3.eth.getBlock('latest')).number
