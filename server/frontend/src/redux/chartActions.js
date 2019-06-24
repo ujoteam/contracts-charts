@@ -202,11 +202,11 @@ export const setTheme = (theme) => {
     }
 }
 
-export const setEthereumNetworkID = (ethereumNetworkID) => {
+export const setEthereumNetworkID = ({ ethereumNetworkID, metamaskError }) => {
     return async (dispatch) => {
         dispatch({
             type: SET_ETHEREUM_NETWORK_ID,
-            payload: { ethereumNetworkID }
+            payload: { ethereumNetworkID, metamaskError }
         })
     }
 }

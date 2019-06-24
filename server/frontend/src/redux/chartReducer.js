@@ -15,6 +15,7 @@ const initialState = {
 
     theme: 'ujo',
     ethereumNetworkID: null,
+    metamaskError: null,
 }
 
 export default (state = initialState, action) => {
@@ -107,6 +108,7 @@ export default (state = initialState, action) => {
         return {
             ...state,
             ethereumNetworkID: action.payload.ethereumNetworkID,
+            metamaskError: action.payload.metamaskError,
         }
     }
 
