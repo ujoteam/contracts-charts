@@ -22,13 +22,12 @@ import TableBody from '@material-ui/core/TableBody'
 import TableCell from '@material-ui/core/TableCell'
 import TableHead from '@material-ui/core/TableHead'
 import TableRow from '@material-ui/core/TableRow'
-import TableSortLabel from '@material-ui/core/TableSortLabel'
 import IconButton from '@material-ui/core/IconButton'
 import Fab from '@material-ui/core/Fab'
 import Tooltip from '@material-ui/core/Tooltip'
 import ThumbUpIcon from '@material-ui/icons/ThumbUp'
 import ExitToAppIcon from '@material-ui/icons/ExitToApp'
-import SendIcon from '@material-ui/icons/Send'
+import AddIcon from '@material-ui/icons/Add'
 import Theme from './Theme'
 import { H2, H3, H4, H5, H6 } from './Typography'
 import { getLeaderboardData, setCurrentAccount, fetchTokenBalance, proposeCid, upvoteCid, withdrawCid, setIsLoading, setTheme } from './redux/chartActions'
@@ -37,6 +36,7 @@ import * as fetch from './fetch'
 import LeaderboardTable from './LeaderboardTable'
 import VideoLeaderboardTable from './VideoLeaderboardTable'
 import AccountBalances from './AccountBalances'
+import SubmitContentDialog from './SubmitContentDialog'
 
 import './fonts/fonts.css'
 import 'typeface-roboto'
@@ -45,6 +45,7 @@ function App(props) {
     const { currentAccount, accounts, setCurrentAccount, getLeaderboardData, fetchTokenBalance, proposeCid, upvoteCid, withdrawCid, setIsLoading, isLoading } = props
     const _inputCid = useRef(null)
 
+    const [ submitContentDialogOpen, setSubmitContentDialogOpen ] = useState(false)
     const classes = useStyles()
     const theme = useTheme()
 
@@ -59,13 +60,6 @@ function App(props) {
         _inputCid.current.focus()
     }
 
-    async function onClickProposeCid() {
-        setIsLoading(true)
-        const cid = await theme.chart.mapContentLinkToCid(_inputCid.current.value)
-        await proposeCid(cid, currentAccount)
-        _inputCid.current.value = ''
-        setIsLoading(false)
-    }
 
     async function clearRedis() {
         setIsLoading(true)
@@ -103,7 +97,7 @@ function App(props) {
                         <div className={classes.leaderboardCardHeader}>
                             <H2>{theme.chart.cardTitleText}</H2>
 
-                            {!isLoading && accounts.length > 1 &&
+                            {/*!isLoading && accounts.length > 1 &&
                                 <div className={classes.accountPickerWrapper}>
                                     {accounts.length > 0 && currentAccount &&
                                         <FormControl className={classes.formControl} margin="none">
@@ -116,25 +110,29 @@ function App(props) {
                                         </FormControl>
                                     }
                                 </div>
-                            }
+                            */}
                             {isLoading &&
                                 <div className={classes.loadingIndicatorWrapper}>
                                     Transaction pending...
                                     <CircularProgress color="primary" size={20} className={classes.loadingIndicator} />
                                 </div>
                             }
+
+                            {!isLoading &&
+                                <Fab
+                                    variant="extended"
+                                    size="small"
+                                    color="primary"
+                                    aria-label="Add"
+                                    className={classes.btnOpenSubmitDialog}
+                                    onClick={() => setSubmitContentDialogOpen(true)}
+                                >
+                                    <AddIcon /> Submit a song
+                                </Fab>
+                            }
                         </div>
 
                         {theme.chart.leaderboardComponent()}
-
-                        <div className={classes.leaderboardControls}>
-                            <H6>{theme.chart.textSubmitCTA}</H6>
-                            <TextField label="Enter a link" inputRef={_inputCid} style={{ width: 400 }} />
-                            <Fab onClick={onClickProposeCid} size="small" color="primary" style={{ marginTop: 10 }}><SendIcon /></Fab>
-                            {/*<div style={{ marginTop: 10 }}>
-                                <div onClick={onClickGenerateCid} className={classes.generateCid}>Generate random CID</div>
-                            </div>*/}
-                        </div>
 
                     </CardContent>
                 </Card>
@@ -166,16 +164,25 @@ function App(props) {
                 </div>
             </div>
 
-            {props.ethereumNetworkID < 1500 && props.ethereumNetworkID !== 4 &&
-                <Dialog open>
-                    <DialogTitle>Wrong Ethereum network</DialogTitle>
-                    <DialogContent>
-                        <Typography>
-                            Ujo Charts lives on Ethereum's Rinkeby network.  Point Metamask at that network and refresh.
-                        </Typography>
-                    </DialogContent>
-                </Dialog>
-            }
+            <Dialog open={props.ethereumNetworkID < 1500 && props.ethereumNetworkID !== 4}>
+                <DialogTitle>Wrong Ethereum network</DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        Ujo Charts lives on Ethereum's Rinkeby network.  Point Metamask at that network and refresh.
+                    </Typography>
+                </DialogContent>
+            </Dialog>
+
+            <SubmitContentDialog
+                open={submitContentDialogOpen}
+                onClose={() => setSubmitContentDialogOpen(false)}
+                proposeCid={proposeCid}
+                isLoading={isLoading}
+                setIsLoading={setIsLoading}
+                currentAccount={currentAccount}
+                ethBalanceOf={props.ethBalanceOf}
+                tokenBalanceOf={props.tokenBalanceOf}
+            />
         </main>
     )
 }
@@ -274,11 +281,12 @@ const useStyles = makeStyles(theme => createStyles({
     },
     leaderboardCardHeader: {
         display: 'flex',
-        '& > *': {
-            flexBasis: '50%',
-        },
+        // '& > *': {
+        //     flexBasis: '50%',
+        // },
 
         '& > h2': {
+            flexGrow: 1,
             fontSize: '2.6rem',
             marginTop: 0,
             fontFamily: theme.chart.fontCardHeader,
@@ -288,13 +296,6 @@ const useStyles = makeStyles(theme => createStyles({
         margin: '-16px -16px 0 -16px',
         padding: '16px 16px 12px 16px',
         backgroundColor: theme.chart.bgColorCardHeader,
-    },
-    leaderboardControls: {
-        margin: '20px 0',
-
-        '& button': {
-            margin: '0 10px',
-        },
     },
     bottomToolbar: {
         marginTop: 20,
@@ -320,6 +321,11 @@ const useStyles = makeStyles(theme => createStyles({
         '&:hover': {
             textDecoration: 'underline',
         },
+    },
+    btnOpenSubmitDialog: {
+        color: theme.palette.primary.main,
+        backgroundColor: 'white',
+        boxShadow: '0px 1px 3px -1px rgba(0,0,0,0.2), 0px 2px 3px 0px rgba(0,0,0,0.14), 0px 1px 5px 0px rgba(0,0,0,0.12)',
     },
 }))
 
