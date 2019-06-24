@@ -15,36 +15,65 @@ async function main() {
     let web3
     if (window.ethereum) {
         web3 = new Web3(window.ethereum)
-        // try {
-        await window.ethereum.enable() // Request account access if needed
-        // } catch (error) {
-        //     // User denied account access
-        // }
+        try {
+            await window.ethereum.enable() // Request account access if needed
+        } catch (error) {
+            // User denied account access
+            store.dispatch(setEthereumNetworkID({
+                ethereumNetworkID: -1,
+                metamaskError: {
+                    title: 'Metamask is locked',
+                    message: 'You must unlock Metamask in order to use Ujo Charts.',
+                },
+            }))
+        }
+
     } else if (window.web3 !== undefined) {
         // use Metamask, et al. if available
         web3 = new Web3(window.web3.currentProvider)
-    } else {
+
+    } else if (process.env.NODE_ENV === 'development' && false) {
         // this is just for local testing
         web3 = new Web3('http://')
         web3.setProvider(new Web3.providers.HttpProvider(process.env.ETH_NODE_HOST))
+    } else {
+        store.dispatch(setEthereumNetworkID({
+            ethereumNetworkID: -1,
+            metamaskError: {
+                title: 'Missing extension',
+                message: 'You need to download the Metamask browser extension to use Ujo Charts.',
+            },
+        }))
     }
 
-    const currentNetwork = await web3.eth.net.getId()
-    store.dispatch(setEthereumNetworkID(currentNetwork))
+    if (web3) {
+        const ethereumNetworkID = await web3.eth.net.getId()
+        if (ethereumNetworkID < 1500 && ethereumNetworkID !== 4) {
+            store.dispatch(setEthereumNetworkID({
+                ethereumNetworkID: -1,
+                metamaskError: {
+                    title: 'Wrong Ethereum network',
+                    message: `Ujo Charts lives on Ethereum's Rinkeby network.  Point Metamask at that network and refresh.`,
+                },
+            }))
+        } else {
+            store.dispatch(setEthereumNetworkID({ ethereumNetworkID }))
 
-    if (!chartContractJson.networks[currentNetwork] || !chartContractJson.networks[currentNetwork].address) {
-        // throw new Error(`Chart.json doesn't contain an entry for the current network ID (${currentNetwork}) ... are you sure you deployed the contract to this network?`)
-    } else {
-        const chartClient = await chart.initClient({
-            web3,
-            chartContractAddress: chartContractJson.networks[currentNetwork].address,
-        })
+            if (!chartContractJson.networks[ethereumNetworkID] || !chartContractJson.networks[ethereumNetworkID].address) {
+                // throw new Error(`Chart.json doesn't contain an entry for the current network ID (${ethereumNetworkID}) ... are you sure you deployed the contract to this network?`)
+            } else {
+                const chartClient = await chart.initClient({
+                    web3,
+                    chartContractAddress: chartContractJson.networks[ethereumNetworkID].address,
+                })
 
-        // Make the chart client available to our Redux actions
-        setChartClient(chartClient)
+                // Make the chart client available to our Redux actions
+                setChartClient(chartClient)
 
-        // Fetch Ethereum accounts
-        store.dispatch(getAccounts())
+                // Fetch Ethereum accounts
+                store.dispatch(getAccounts())
+            }
+        }
     }
 
 

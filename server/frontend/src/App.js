@@ -40,6 +40,7 @@ import SubmitContentDialog from './SubmitContentDialog'
 
 import './fonts/fonts.css'
 import 'typeface-roboto'
+import metamaskLogo from './images/metamask.png'
 
 function App(props) {
     const { currentAccount, accounts, setCurrentAccount, getLeaderboardData, fetchTokenBalance, proposeCid, upvoteCid, withdrawCid, setIsLoading, isLoading } = props
@@ -127,7 +128,7 @@ function App(props) {
                                     className={classes.btnOpenSubmitDialog}
                                     onClick={() => setSubmitContentDialogOpen(true)}
                                 >
-                                    <AddIcon /> Submit a song
+                                    <AddIcon /> {theme.chart.textSubmitContentCTA}
                                 </Fab>
                             }
                         </div>
@@ -164,14 +165,17 @@ function App(props) {
                 </div>
             </div>
 
-            <Dialog open={props.ethereumNetworkID < 1500 && props.ethereumNetworkID !== 4}>
-                <DialogTitle>Wrong Ethereum network</DialogTitle>
-                <DialogContent>
-                    <Typography>
-                        Ujo Charts lives on Ethereum's Rinkeby network.  Point Metamask at that network and refresh.
-                    </Typography>
-                </DialogContent>
-            </Dialog>
+            {!!props.metamaskError &&
+                <Dialog open>
+                    <DialogTitle>{props.metamaskError.title}</DialogTitle>
+                    <DialogContent className={classes.metamaskDialogContent}>
+                        <img src={metamaskLogo} />
+                        <Typography>
+                            {props.metamaskError.message}
+                        </Typography>
+                    </DialogContent>
+                </Dialog>
+            }
 
             <SubmitContentDialog
                 open={submitContentDialogOpen}
@@ -327,6 +331,12 @@ const useStyles = makeStyles(theme => createStyles({
         backgroundColor: 'white',
         boxShadow: '0px 1px 3px -1px rgba(0,0,0,0.2), 0px 2px 3px 0px rgba(0,0,0,0.14), 0px 1px 5px 0px rgba(0,0,0,0.12)',
     },
+    metamaskDialogContent: {
+        display: 'flex',
+        '& p': {
+            marginTop: 10,
+        },
+    },
 }))
 
 const mapStateToProps = (state) => {
@@ -337,7 +347,7 @@ const mapStateToProps = (state) => {
         ethBalanceOf: state.chart.ethBalanceOf,
         tokenBalanceOf: state.chart.tokenBalanceOf,
         currentAccount: state.chart.currentAccount,
-        ethereumNetworkID: state.chart.ethereumNetworkID,
+        metamaskError: state.chart.metamaskError,
     }
 }
 
