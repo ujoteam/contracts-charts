@@ -1,0 +1,61 @@
+
+@font-face {
+    font-family: Arcade;
+    src: url(arcade.ttf);
+}
+
+@font-face {
+    font-family: 'Arcade Classic';
+    src: url(arcade-classic.ttf);
+}
+
+@font-face {
+    font-family: 'Light Pixel';
+    src: url(light_pixel-7.ttf);
+}
+
+@font-face {
+    font-family: 'Edit Undo';
+    src: url(editundo.ttf);
+}
+
+@font-face {
+    font-family: 'Edit Undo T';
+    src: url(edundot.ttf);
+}
+
+@font-face {
+    font-family: 'Edit Undo Line';
+    src: url(edunline.ttf);
+}
+
+@font-face {
+    font-family: 'Mini Pixel';
+    src: url(mini_pixel-7.ttf);
+}
+
+@font-face {
+    font-family: 'November';
+    src: url(november.ttf);
+}
+
+@font-face {
+    font-family: 'Small Bold Pixel';
+    src: url(small_bold_pixel-7.ttf);
+}
+
+@font-face {
+    font-family: 'Small Pixel';
+    src: url(small_pixel-7.ttf);
+}
+
+@font-face {
+    font-family: 'Canela Black';
+    src: url(Canela-Black-Web.woff);
+}
+
+@font-face {
+    font-family: 'AkzidenzGrotesk-Bold';
+    src: url(AkzidenzGrotesk-Bold.otf);
+}
+
