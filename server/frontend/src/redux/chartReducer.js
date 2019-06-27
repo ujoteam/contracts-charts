@@ -1,7 +1,11 @@
-import { SET_ACCOUNTS, SET_CURRENT_ACCOUNT, SET_ETH_BALANCE, SET_TOKEN_BALANCE, SET_LEADERBOARD_DATA, SET_YOUTUBE_VIDEO_DATA, SET_DECRYPT_ARTICLE_DATA, SET_IS_LOADING, SET_THEME, SET_ETHEREUM_NETWORK_ID } from './chartActions'
+import { SET_ACCOUNTS, SET_CURRENT_ACCOUNT, SET_ETH_BALANCE, SET_TOKEN_BALANCE, SET_LEADERBOARD_DATA, SET_YOUTUBE_VIDEO_DATA, SET_DECRYPT_ARTICLE_DATA, SET_IS_TX_PENDING, SET_THEME, SET_ETHEREUM_NETWORK_ID } from './chartActions'
 
 const initialState = {
-    isLoading: false,
+    isTxPending: false,
+    pendingTxHash: null,
+    // isTxPending: true,
+    // pendingTxHash: '0x53e1b541e7d1b02b579008ebc6a2ef7d292e80d1956162544ce58ffcb084aa7a',
+
     accounts: [],
     currentAccount: null,
     tokenBalanceOf: {},
@@ -20,10 +24,11 @@ const initialState = {
 
 export default (state = initialState, action) => {
     switch (action.type) {
-    case SET_IS_LOADING: {
+    case SET_IS_TX_PENDING: {
         return {
             ...state,
-            isLoading: action.payload.isLoading,
+            isTxPending: action.payload.isTxPending,
+            pendingTxHash: action.payload.pendingTxHash,
         }
     }
 

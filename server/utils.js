@@ -26,6 +26,12 @@ export function receipt(tx) {
     })
 }
 
+export function onTxHash(tx) {
+    return new Promise((resolve, reject) => {
+        tx.on('transactionHash', resolve)
+    })
+}
+
 export function* enumerate(list) {
     for (let i = 0; i < list.length; i++) {
         yield [i, list[i]]

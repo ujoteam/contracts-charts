@@ -9,7 +9,7 @@ export const SET_TOKEN_BALANCE = 'SET_TOKEN_BALANCE'
 export const SET_ETH_BALANCE = 'SET_ETH_BALANCE'
 export const SET_YOUTUBE_VIDEO_DATA = 'SET_YOUTUBE_VIDEO_DATA'
 export const SET_DECRYPT_ARTICLE_DATA = 'SET_DECRYPT_ARTICLE_DATA'
-export const SET_IS_LOADING = 'SET_IS_LOADING'
+export const SET_IS_TX_PENDING = 'SET_IS_TX_PENDING'
 export const SET_THEME = 'SET_THEME'
 export const SET_ETHEREUM_NETWORK_ID = 'SET_ETHEREUM_NETWORK_ID'
 
@@ -18,11 +18,11 @@ export function setChartClient(client) {
     chartClient = client
 }
 
-export const setIsLoading = (isLoading) => {
+export const setIsTxPending = (isTxPending, pendingTxHash = null) => {
     return async (dispatch) => {
         dispatch({
-            type: SET_IS_LOADING,
-            payload: { isLoading },
+            type: SET_IS_TX_PENDING,
+            payload: { isTxPending, pendingTxHash },
         })
     }
 }
@@ -111,9 +111,12 @@ export const getLeaderboardData = (currentAccount) => {
 
 export const proposeCid = (cid, currentAccount) => {
     return async (dispatch) => {
-        dispatch(setIsLoading(true))
+        dispatch(setIsTxPending(true))
 
-        await chartClient.proposeCid({ cid, account: currentAccount })
+        const [ onTxHash, onReceipt ] = chartClient.proposeCid({ cid, account: currentAccount })
+        const txHash = await onTxHash
+        dispatch(setIsTxPending(true, txHash))
+        await onReceipt
         await timeout(1200)
         await Promise.all([
             dispatch(fetchEthBalance(currentAccount)),
@@ -121,15 +124,18 @@ export const proposeCid = (cid, currentAccount) => {
             dispatch(getLeaderboardData(currentAccount)),
         ])
 
-        dispatch(setIsLoading(false))
+        dispatch(setIsTxPending(false, txHash))
     }
 }
 
 export const upvoteCid = (cid, currentAccount) => {
     return async (dispatch) => {
-        dispatch(setIsLoading(true))
+        dispatch(setIsTxPending(true))
 
-        await chartClient.upvoteCid({ cid, account: currentAccount })
+        const [ onTxHash, onReceipt ] = chartClient.upvoteCid({ cid, account: currentAccount })
+        const txHash = await onTxHash
+        dispatch(setIsTxPending(true, txHash))
+        await onReceipt
         await timeout(1200)
         await Promise.all([
             dispatch(fetchEthBalance(currentAccount)),
@@ -137,15 +143,18 @@ export const upvoteCid = (cid, currentAccount) => {
             dispatch(getLeaderboardData(currentAccount)),
         ])
 
-        dispatch(setIsLoading(false))
+        dispatch(setIsTxPending(false, txHash))
     }
 }
 
 export const withdrawCid = (cid, currentAccount) => {
     return async (dispatch) => {
-        dispatch(setIsLoading(true))
+        dispatch(setIsTxPending(true))
 
-        await chartClient.withdrawCid({ cid, account: currentAccount })
+        const [ onTxHash, onReceipt ] = chartClient.withdrawCid({ cid, account: currentAccount })
+        const txHash = await onTxHash
+        dispatch(setIsTxPending(true, txHash))
+        await onReceipt
         await timeout(1200)
         await Promise.all([
             dispatch(fetchEthBalance(currentAccount)),
@@ -153,7 +162,7 @@ export const withdrawCid = (cid, currentAccount) => {
             dispatch(getLeaderboardData(currentAccount)),
         ])
 
-        dispatch(setIsLoading(false))
+        dispatch(setIsTxPending(false, txHash))
     }
 }
 

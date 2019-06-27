@@ -5,6 +5,7 @@ import HDWalletProvider from 'truffle-hdwallet-provider'
 
 export let web3
 export let chartContract
+export let ethAccounts
 
 const chartContractJsonRoot = process.env.CONTRACT_JSON_ROOT || path.join(__dirname, 'static')
 const chartContractJson = require(path.join(chartContractJsonRoot, 'Chart.json'))
@@ -20,7 +21,7 @@ export async function initWeb3() {
         web3.setProvider(provider)
     }
 
-    const ethAccounts = await web3.eth.getAccounts()
+    ethAccounts = await web3.eth.getAccounts()
     console.log('eth accounts:', ethAccounts)
 
     const currentNetwork = await web3.eth.net.getId()

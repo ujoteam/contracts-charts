@@ -1,5 +1,6 @@
 import express from 'express'
 import Promise from 'bluebird'
+import { web3, ethAccounts }  from './web3'
 import { getYoutubeVideoMetadata, getDecryptArticleMetadata } from './util/data-sources'
 import { reportTrendingSongs } from './workers'
 import * as redis from './redis'
@@ -89,7 +90,7 @@ export function startHTTPServer() {
         }
 
         const wei = web3.utils.toWei(Math.min(amount, maxFaucetSendAmount).toString(), 'ether')
-        const tx = await web3.eth.sendTransaction({ from: serverEthAccount, to: address, value: wei })
+        const tx = await web3.eth.sendTransaction({ from: ethAccounts[0], to: address, value: wei })
 
         return res.status(200).json({ result: 'sent you some ETH' })
     }))

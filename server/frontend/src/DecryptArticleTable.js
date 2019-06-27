@@ -58,16 +58,17 @@ function DecryptArticleTable(props) {
                 const canUpvote = item.upvoteIndex === '-'
                 const canWithdraw = parseFloat(item.withdrawableBalance) > 0
                 return (
+                    <a href={`https://decrypt.co/${item.serviceSpecificID}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div key={item.cid} className={classes.row}>
 
                     <div className={classes.rankAndScore}>
                         <div className={classes.rank}><span style={{ fontSize: '0.9rem', verticalAlign: 'super' }}>#</span>{item.rank+1}</div>
-                        <div className={classes.score}>{item.score.toFixed(2)} points</div>
+                        {/*<div className={classes.score}>{item.score.toFixed(2)} points</div>*/}
                     </div>
 
-                    <div className={classes.youtubeEmbed}>
-                       <img src={(decryptArticles[ item.serviceSpecificID ] || {}).image} />
-                    </div>
+                    <div className={classes.youtubeEmbed} style={{ backgroundImage: `url(${(decryptArticles[ item.serviceSpecificID ] || {}).image})`, backgroundSize: 'cover' }} />
+                       {/*<img src={(decryptArticles[ item.serviceSpecificID ] || {}).image} />
+                    </div>*/}
 
                     <div className={classes.songDetails}>
                         <div className={classes.songTitle}>{(decryptArticles[ item.serviceSpecificID ] || {}).title}</div>
@@ -96,6 +97,7 @@ function DecryptArticleTable(props) {
                         </div>
                     </div>
                 </div>
+                </a>
                 )
             })}
 
@@ -114,6 +116,7 @@ const useStyles = makeStyles(theme => createStyles({
     row: {
         display: 'flex',
         padding: 10,
+        pointer: 'cursor',
 
         '&:hover': {
             backgroundColor: '#f5f5f5',
@@ -126,6 +129,8 @@ const useStyles = makeStyles(theme => createStyles({
     },
     rankAndScore: {
         display: 'flex',
+        flexGrow: 0,
+        flexShrink: 0,
         flexDirection: 'column',
         alignItems: 'center',
         height: 'fit-content',
@@ -172,8 +177,13 @@ const useStyles = makeStyles(theme => createStyles({
     },
 
     youtubeEmbed: {
+        // height: 'fit-content',
+        width: 210,
         height: 120,
-        alignSelf: 'center',
+        flexGrow: 0,
+        flexShrink: 0,
+
+        alignSelf: 'flex-start',
         '& img': {
             maxWidth: 180,
             maxHeight: 110,
@@ -224,6 +234,7 @@ const mapStateToProps = (state) => {
         .map(item => mapLeaderboardItem(item, state.chart.upvoteIndices, state.chart.withdrawableBalances))
         .filter(item => item.type === 'decrypt')
         .map((item, i) => ({ ...item, rank: i }))
+        .filter(item => parseInt(item.submittedInBlock, 10) > 4631164)
 
     return {
         leaderboardData,

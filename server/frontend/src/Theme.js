@@ -120,7 +120,7 @@ const decryptTheme = createMuiTheme({
         },
         textSubmitContentCTA: 'Submit an article',
         textSubmitContentInputFieldLabel: 'Enter a Decrypt article URL',
-        cardTitleText: 'Layer 2 solutions',
+        cardTitleText: 'Stablecoins',
         bgColorCardHeader: '#444444',
         fontColorCardHeader: 'white',
         fontCardHeader: `'Canela Black'`,
