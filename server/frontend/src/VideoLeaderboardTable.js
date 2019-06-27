@@ -61,7 +61,7 @@ function VideoLeaderboardTable(props) {
 
                     <div className={classes.rankAndScore}>
                         <div className={classes.rank}><span style={{ fontSize: '0.9rem', verticalAlign: 'super' }}>#</span>{item.rank+1}</div>
-                        <div className={classes.score}>{item.score.toFixed(2)} points</div>
+                        {/*<div className={classes.score}>{item.score.toFixed(2)} points</div>*/}
                     </div>
 
                     <div className={classes.youtubeEmbed}>
@@ -124,6 +124,8 @@ const useStyles = makeStyles(theme => createStyles({
     },
     rankAndScore: {
         display: 'flex',
+        flexGrow: 0,
+        flexShrink: 0,
         flexDirection: 'column',
         alignItems: 'center',
         height: 'fit-content',

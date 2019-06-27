@@ -23,11 +23,10 @@ function SubmitContentDialog(props) {
     const { ethBalanceOf, tokenBalanceOf, currentAccount } = props
 
     async function onClickProposeCid() {
-        props.setIsLoading(true)
+        props.onClose()
         const cid = await theme.chart.mapContentLinkToCid(inputCid)
         await props.proposeCid(cid, currentAccount)
         setInputCid('')
-        props.setIsLoading(false)
     }
 
     function onChangeInput(evt) {
@@ -95,12 +94,12 @@ function SubmitContentDialog(props) {
                             </div>
                         }
 
-                        {props.isLoading &&
+                        {/*props.isTxPending &&
                             <div className={classes.loadingIndicatorWrapper}>
                                 Transaction pending... (it's safe to close this window now)
                                 <CircularProgress color="primary" size={20} className={classes.loadingIndicator} />
                             </div>
-                        }
+                        */}
                     </div>
                 </Typography>
 

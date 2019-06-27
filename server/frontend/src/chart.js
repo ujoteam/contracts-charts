@@ -1,5 +1,5 @@
 import BigNumber from 'bignumber.js'
-import { receipt, ValidationError, toBN, hexToBuffer } from './utils'
+import { receipt, onTxHash, ValidationError, toBN, hexToBuffer } from './utils'
 
 import chartContractJson from './Chart.json'
 
@@ -76,22 +76,22 @@ export async function initClient({ web3, chartContractAddress }) {
             return toBN( await client.contract.methods.balanceOf(account).call() ).div( client.DECIMALS )
         },
 
-        async proposeCid({ cid, account }) {
+        proposeCid({ cid, account }) {
             cid = hexToBuffer(cid)
             const tx = client.contract.methods.propose(cid).send({ from: account, gas: 200000 })
-            return receipt(tx)
+            return [ onTxHash(tx), receipt(tx) ]
         },
 
-        async upvoteCid({ cid, account }) {
+        upvoteCid({ cid, account }) {
             cid = hexToBuffer(cid)
             const tx = client.contract.methods.upvote(cid).send({ from: account, gas: 200000 })
-            return receipt(tx)
+            return [ onTxHash(tx), receipt(tx) ]
         },
 
-        async withdrawCid({ cid, account }) {
+        withdrawCid({ cid, account }) {
             cid = hexToBuffer(cid)
             const tx = client.contract.methods.withdraw([cid]).send({ from: account, gas: 200000 })
-            return receipt(tx)
+            return [ onTxHash(tx), receipt(tx) ]
         },
     }
 

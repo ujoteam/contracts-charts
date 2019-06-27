@@ -3,6 +3,9 @@ import { connect } from 'react-redux'
 import sortBy from 'lodash/sortBy'
 import moment from 'moment'
 import { makeStyles, createStyles, useTheme } from '@material-ui/styles'
+import Slide from '@material-ui/core/Slide'
+import Zoom from '@material-ui/core/Zoom'
+import Paper from '@material-ui/core/Paper'
 import TextField from '@material-ui/core/TextField'
 import Button from '@material-ui/core/Button'
 import Select from '@material-ui/core/Select'
@@ -30,25 +33,37 @@ import ExitToAppIcon from '@material-ui/icons/ExitToApp'
 import AddIcon from '@material-ui/icons/Add'
 import Theme from './Theme'
 import { H2, H3, H4, H5, H6 } from './Typography'
-import { getLeaderboardData, setCurrentAccount, fetchTokenBalance, proposeCid, upvoteCid, withdrawCid, setIsLoading, setTheme } from './redux/chartActions'
+import { getLeaderboardData, setCurrentAccount, fetchTokenBalance, proposeCid, upvoteCid, withdrawCid, setIsTxPending, setTheme } from './redux/chartActions'
 import { timeout } from './utils'
 import * as fetch from './fetch'
 import LeaderboardTable from './LeaderboardTable'
 import VideoLeaderboardTable from './VideoLeaderboardTable'
 import AccountBalances from './AccountBalances'
 import SubmitContentDialog from './SubmitContentDialog'
+import LoadingIndicator from './LoadingIndicator'
 
 import './fonts/fonts.css'
 import 'typeface-roboto'
 import metamaskLogo from './images/metamask.png'
 
 function App(props) {
-    const { currentAccount, accounts, setCurrentAccount, getLeaderboardData, fetchTokenBalance, proposeCid, upvoteCid, withdrawCid, setIsLoading, isLoading } = props
+    const { currentAccount, accounts, setCurrentAccount, getLeaderboardData, fetchTokenBalance, proposeCid, upvoteCid, withdrawCid, setIsTxPending, isTxPending, pendingTxHash } = props
     const _inputCid = useRef(null)
 
     const [ submitContentDialogOpen, setSubmitContentDialogOpen ] = useState(false)
+    const [ showPendingTxIndicator, setShowPendingTxIndicator ] = useState(props.isTxPending)
     const classes = useStyles()
     const theme = useTheme()
+
+    useEffect(() => {
+        if (!isTxPending) {
+            setTimeout(() => setShowPendingTxIndicator(false), 3000)
+        } else {
+            setShowPendingTxIndicator(true)
+        }
+    }, [isTxPending])
+
+    window.setIsTxPending = setIsTxPending
 
     function onClickGenerateCid() {
         let result = ''
@@ -63,14 +78,10 @@ function App(props) {
 
 
     async function clearRedis() {
-        setIsLoading(true)
-
         await fetch.clearRedis()
         await timeout(1200)
 
         await getLeaderboardData(currentAccount)
-
-        setIsLoading(false)
     }
 
     return (
@@ -98,39 +109,26 @@ function App(props) {
                         <div className={classes.leaderboardCardHeader}>
                             <H2>{theme.chart.cardTitleText}</H2>
 
-                            {/*!isLoading && accounts.length > 1 &&
-                                <div className={classes.accountPickerWrapper}>
-                                    {accounts.length > 0 && currentAccount &&
-                                        <FormControl className={classes.formControl} margin="none">
-                                            <Select value={currentAccount} onChange={evt => setCurrentAccount(evt.target.value)} classes={{ selectMenu: classes.accountPickerInput }}>
-                                                {accounts.map(acct => (
-                                                    <MenuItem key={acct} value={acct}>{acct}</MenuItem>
-                                                ))}
-                                            </Select>
-                                            <FormHelperText style={{ textAlign: 'right' }}>Current account</FormHelperText>
-                                        </FormControl>
-                                    }
-                                </div>
-                            */}
-                            {isLoading &&
-                                <div className={classes.loadingIndicatorWrapper}>
-                                    Transaction pending...
-                                    <CircularProgress color="primary" size={20} className={classes.loadingIndicator} />
-                                </div>
-                            }
+                            <div style={{ position: 'relative', width: 300, height: 52 }}>
+                                <Slide direction="left" in={showPendingTxIndicator} mountOnEnter unmountOnExit>
+                                    <div>
+                                        <LoadingIndicator isTxPending={isTxPending} pendingTxHash={pendingTxHash} />
+                                    </div>
+                                </Slide>
 
-                            {!isLoading &&
-                                <Fab
-                                    variant="extended"
-                                    size="small"
-                                    color="primary"
-                                    aria-label="Add"
-                                    className={classes.btnOpenSubmitDialog}
-                                    onClick={() => setSubmitContentDialogOpen(true)}
-                                >
-                                    <AddIcon /> {theme.chart.textSubmitContentCTA}
-                                </Fab>
-                            }
+                                <Zoom in={!showPendingTxIndicator} mountOnEnter unmountOnExit>
+                                    <Fab
+                                        variant="extended"
+                                        size="small"
+                                        color="primary"
+                                        aria-label="Add"
+                                        className={classes.btnOpenSubmitDialog}
+                                        onClick={() => setSubmitContentDialogOpen(true)}
+                                    >
+                                        <AddIcon /> {theme.chart.textSubmitContentCTA}
+                                    </Fab>
+                                </Zoom>
+                            </div>
                         </div>
 
                         {theme.chart.leaderboardComponent()}
@@ -181,8 +179,6 @@ function App(props) {
                 open={submitContentDialogOpen}
                 onClose={() => setSubmitContentDialogOpen(false)}
                 proposeCid={proposeCid}
-                isLoading={isLoading}
-                setIsLoading={setIsLoading}
                 currentAccount={currentAccount}
                 ethBalanceOf={props.ethBalanceOf}
                 tokenBalanceOf={props.tokenBalanceOf}
@@ -285,6 +281,7 @@ const useStyles = makeStyles(theme => createStyles({
     },
     leaderboardCardHeader: {
         display: 'flex',
+        minHeight: 52,
         // '& > *': {
         //     flexBasis: '50%',
         // },
@@ -309,15 +306,6 @@ const useStyles = makeStyles(theme => createStyles({
     fab: {
         height: 32,
     },
-    loadingIndicatorWrapper: {
-        textAlign: 'right',
-        color: '#a0a0a0',
-        fontSize: '0.8rem',
-    },
-    loadingIndicator: {
-        marginLeft: 10,
-        verticalAlign: 'bottom',
-    },
     generateCid: {
         color: '#39b3f1',
         fontSize: '0.8rem',
@@ -330,6 +318,9 @@ const useStyles = makeStyles(theme => createStyles({
         color: theme.palette.primary.main,
         backgroundColor: 'white',
         boxShadow: '0px 1px 3px -1px rgba(0,0,0,0.2), 0px 2px 3px 0px rgba(0,0,0,0.14), 0px 1px 5px 0px rgba(0,0,0,0.12)',
+        position: 'absolute',
+        top: 9,
+        right: 0,
     },
     metamaskDialogContent: {
         display: 'flex',
@@ -342,7 +333,8 @@ const useStyles = makeStyles(theme => createStyles({
 const mapStateToProps = (state) => {
     return {
         theme: state.chart.theme,
-        isLoading: state.chart.isLoading,
+        isTxPending: state.chart.isTxPending,
+        pendingTxHash: state.chart.pendingTxHash,
         accounts: state.chart.accounts,
         ethBalanceOf: state.chart.ethBalanceOf,
         tokenBalanceOf: state.chart.tokenBalanceOf,
@@ -358,7 +350,7 @@ const mapDispatchToProps = {
     proposeCid,
     upvoteCid,
     withdrawCid,
-    setIsLoading,
+    setIsTxPending,
     setTheme,
 }
 
